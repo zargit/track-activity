@@ -1,6 +1,8 @@
 <html>
 	<head>
       
+		<meta http-equiv="Content-Type" content="text/html;charset=ISO-8859-1">
+		<meta charset="UTF-8">
 		<!-- Latest compiled and minified CSS -->
 		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
 
@@ -13,11 +15,256 @@
 		<!-- Latest compiled and minified JavaScript -->
 		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
 		
-		<script type = "text/javascript" src = "{{ url_for('static', filename = 'app.js') }}" ></script>
 	</head>
 
 	<body>
-		Hello, I am a html page going through a flask.
+		<div id="root" class="container">
+
+		</div>
 	</body>
+<!--	<script crossorigin src="https://unpkg.com/react@16/umd/react.production.min.js"></script>
+	<script crossorigin src="https://unpkg.com/react-dom@16/umd/react-dom.production.min.js"></script>
+	<script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+	-->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/react/15.4.2/react.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/react/15.4.2/react-dom.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.21.1/babel.min.js"></script>
+	<script type="text/babel">
+
+	class Dashboard extends React.Component {
+		constructor(props){
+			super(props);			
+
+			this.state = {
+				profiles: this.props.profiles,
+				selectedProfile: this.props.profiles && this.props.profiles[0],
+				currentSources: [],
+				selectedSource: undefined,
+				items: []
+			}
+		}
+
+		getProfileWithID(id){
+			for(let i=0;i<this.state.profiles.length;i++){
+				if(this.state.profiles[i].id == id){
+					return this.state.profiles[i];
+				}
+			}
+			return null;
+		}
+
+		_addProfile(){
+			let name = prompt("Enter a name for the profile: ");
+			var that = this;
+			$.ajax({
+				type: 'POST',
+				url: '/track/add/profile',
+				data: {'name': name},
+				success: (data, status) => {
+					if(status === 'success'){
+						let profiles = that.state.profiles;
+						profiles.push(data);
+						that.setState({
+							profiles: profiles,
+							selectedProfile: profiles[profiles.length-1]	
+						});
+					}
+				}
+			});
+
+		}
+
+		_removeProfile(){
+			var that = this;
+			var id = this.state.selectedProfile.id;
+			alert(id);
+			$.ajax({
+				type: 'POST',
+				url: '/track/remove/profile',
+				data: {'id': id},
+				success: (data, status) => {
+					if(status === 'success'){	
+						that.setState({
+							profiles: data['records'],
+							selectedProfile: data['records'] && data['records'][0]
+						});
+					}
+				}
+			});
+
+		}
+
+		_onChange(id){
+			var that = this;
+
+			$.get('/track/get/sources/'+id, function(data, status){
+
+				if(typeof data === 'string'){
+					data = JSON.parse(data);
+				}
+				that.setState({
+					selectedProfile: that.getProfileWithID(id),
+					currentSources: data
+				});
+
+			});
+		}
+
+		_addSource(){
+			let name = prompt("Enter a name for the source: ");
+			let urls = prompt("Enter , separated urls: ");
+			let selectors = prompt("Enter ; separated css selectors: ");
+			let keywords = prompt("Enter , separated keywords: ");
+
+
+			var that = this;
+			$.ajax({
+				type: 'POST',
+				url: '/track/add/source',
+				data: {
+					'id': that.state.selectedProfile.id,
+					'name': name,
+					'urls': urls,
+					'selectors': selectors,
+					'keywords': keywords
+
+				},
+				success: (data, status) => {
+					if(status === 'success'){
+						
+						if(typeof data === 'string'){
+							data = JSON.parse(data);
+						}
+
+						that.setState({
+							currentSources: data
+						});
+					}
+				}
+			});
+		}
+		
+		render() {
+			
+			const profilelist = this.state.profiles && this.state.profiles.map(obj => {
+				return <option value={obj.id}>{obj.name}</option>;
+			});
+
+			let _id = this.state.selectedProfile && this.state.selectedProfile.id;
+			alert(JSON.stringify(this.state.currentSources));
+			const sourcelist = this.state.currentSources && this.state.currentSources.map(source => {
+				return (
+					<Source 
+						name={source.name}
+						urls={source.urls}
+						selectors={source.selectors}
+						keywords={source.keywords} 
+						onClick={() => this.fetchFromSource(source)} />
+				);
+			});
+			
+			const itemlist = [];
+
+			return (
+				<div className="container-fluid">
+					<div className="row">
+						<div className="col-sm-4">
+							<select className="form-control" onChange={(event) => this._onChange(event.target.value)} value={_id}>
+								{profilelist}
+							</select>
+						</div>
+						<div className="col-sm-4">
+							{profilelist.length > 0 &&
+							<button type="button" className="btn btn-primary btn-block" onClick={() => this._removeProfile()}>Remove Selected Profile</button>
+							}
+						</div>
+						<div className="col-sm-4">
+							<button type="button" className="btn btn-primary btn-block" onClick={() => this._addProfile()}>Add Profile</button>
+						</div>
+					</div>
+					<div className="row">
+						<div className="col-sm-4">
+							<div className="list-group">
+								{sourcelist}
+							</div>
+							<button type="button" className="btn btn-primary btn-block" onClick={() => this._addSource()}>Add Source</button>
+						</div>
+						<div className="col-sm-8">
+						
+						</div>
+					</div>
+				</div>
+			);
+		}
+
+		fetchFromSource(source){
+			var that = this;
+			$.ajax({
+				type: 'POST',
+				url: '/track/gather',
+				data: {'source': source},
+				success: (data, status) => {
+					alert(JSON.stringify(data));
+					if(status === 'success'){	
+						that.setState({
+							selectedSource: source,
+							items: data
+						});
+					}
+				}
+			}
+		}
+	}
+
+	class Source extends React.Component {
+		render() {
+			return (
+				<a href="#" className="list-group-item list-group-item-action flex-column align-items-start active" onClick={() => this.props.onClick()}>
+    				<div className="d-flex w-100 justify-content-between">
+						<h5 className="mb-1">{this.props.name}</h5>
+						<small>Url: {this.props.urls}</small>
+				    </div>
+					<small>Selectors: {this.props.selectors}</small>
+					<br/>
+					<small>Keywords: {this.props.keywords}</small>
+				</a>
+			);
+		}
+	}
+
+	class Item extends React.Component {
+		render() {
+			return (
+				<div className="item">
+					<p className="text">
+						<a href={this.props.item.link}>{this.props.item.text}</a>	
+					</p> 
+				</div>
+			);
+		}
+	}
+
+	window.onload = init;
+
+	function init(){
+		
+		$.get('/track/get/profiles', function(data, status){
+			
+			if(typeof data === 'string'){
+				data = JSON.parse(data);
+			}
+
+			ReactDOM.render(
+				<Dashboard 
+					profiles={data['records']}
+				/>,
+				document.getElementById('root')
+			);
+		});
+
+	}
+
+	
+	</script>
 
 </html>
