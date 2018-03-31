@@ -42,6 +42,10 @@
 				selectedSource: undefined,
 				items: []
 			}
+			
+			if(this.state.selectedProfile){
+				this._onChange(this.state.selectedProfile.id);
+			}
 		}
 
 		getProfileWithID(id){
@@ -77,7 +81,6 @@
 		_removeProfile(){
 			var that = this;
 			var id = this.state.selectedProfile.id;
-			alert(id);
 			$.ajax({
 				type: 'POST',
 				url: '/track/remove/profile',
@@ -151,7 +154,6 @@
 			});
 
 			let _id = this.state.selectedProfile && this.state.selectedProfile.id;
-			alert(JSON.stringify(this.state.currentSources));
 			const sourcelist = this.state.currentSources && this.state.currentSources.map(source => {
 				return (
 					<Source 
@@ -163,7 +165,9 @@
 				);
 			});
 			
-			const itemlist = [];
+			const itemlist = this.state.items && this.state.items.map(obj => {
+				return (<Item text={obj.text} link={obj.link} />);
+			});
 
 			return (
 				<div className="container-fluid">
@@ -190,7 +194,7 @@
 							<button type="button" className="btn btn-primary btn-block" onClick={() => this._addSource()}>Add Source</button>
 						</div>
 						<div className="col-sm-8">
-						
+							{itemlist.length > 0 && itemlist}
 						</div>
 					</div>
 				</div>
@@ -201,18 +205,14 @@
 			var that = this;
 			$.ajax({
 				type: 'POST',
-				url: '/track/gather',
-				data: {'source': source},
+				url: '/track/gather/info',
+				data: {'data': JSON.stringify(source)},
 				success: (data, status) => {
-					alert(JSON.stringify(data));
-					if(status === 'success'){	
-						that.setState({
-							selectedSource: source,
-							items: data
-						});
-					}
+					that.setState({
+						items: data
+					});
 				}
-			}
+			});
 		}
 	}
 
@@ -235,10 +235,11 @@
 	class Item extends React.Component {
 		render() {
 			return (
-				<div className="item">
-					<p className="text">
-						<a href={this.props.item.link}>{this.props.item.text}</a>	
-					</p> 
+				<div className="card">
+  					<div className="card-block">
+						<p className="card-text">{this.props.text}</p>
+						<a href={this.props.link} className="card-link">Source Link</a>
+					</div>
 				</div>
 			);
 		}

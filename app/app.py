@@ -23,9 +23,13 @@ app = Flask(__name__)
 def hello():
     return render_template("index.html")
 
-@app.route('/gather', methods=['POST'])
+
+@app.route('/gather/info', methods=['POST'])
 def gather_from_source():
-    driver.get(request.form['urls'][0])
+
+    source = json.loads(request.form['data'])
+
+    driver.get(source['urls'][0])
     delay = 2 # seconds
     try:
         myElem = WebDriverWait(driver, delay)
@@ -33,12 +37,22 @@ def gather_from_source():
     except TimeoutException:
         print("Loading took too much time!")
 
-    headlines = driver.find_elements_by_css_selector(request.form['selectors'][0])
+    headlines = driver.find_elements_by_css_selector(source['selectors'][0])
     result = []
-    for hl in headlines:
-        for word in request.form['keywords']:
-            if word.lower() in hl.text:
-                result.append(hl.text)
+    
+    if 'cnn' in source['urls'][0]:
+        for hl in headlines:
+            for word in source['keywords']:
+                if word.strip().lower() in hl.text.lower():
+                    result.append({'text': hl.text, 'link':
+                        hl.find_element_by_css_selector('a').get_attribute('href')})
+
+    elif 'twitter' in source['urls'][0]:
+        for tweet in headlines:
+            result.append({
+                'text': tweet.find_element_by_css_selector('.js-tweet-text-container').text,
+                'link': source['urls'][0]+'/status/'+tweet.get_attribute('data-tweet-id')
+            });
 
     print(result)
     return jsonify(result)
@@ -146,4 +160,3 @@ def hand_remove_source(pid, sid):
 
 if __name__ == '__main__':
     app.run(port=3000)
-    driver.quit()

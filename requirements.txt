@@ -1,4 +1,6 @@
 flask
+flask_mime
 requests
 selenium
 beautifulsoup4
+
