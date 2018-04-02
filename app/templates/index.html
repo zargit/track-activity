@@ -49,7 +49,8 @@
 				selectedProfile: this.props.profiles && this.props.profiles[0],
 				currentSources: [],
 				selectedSource: undefined,
-				items: []
+				items: [],
+				crawling: false
 			}
 			
 			if(this.state.selectedProfile){
@@ -203,6 +204,7 @@
 							<button type="button" className="btn btn-primary btn-block" onClick={() => this._addSource()}>Add Source</button>
 						</div>
 						<div className="col-sm-8">
+							{this.state.crawling && <i>Crawling ... </i>}
 							{itemlist.length > 0 && itemlist}
 						</div>
 					</div>
@@ -216,8 +218,15 @@
 				type: 'POST',
 				url: '/track/gather/info',
 				data: {'data': JSON.stringify(source)},
+				beforeSend: (xhr) => {
+					that.setState({
+						crawling: true,
+						items: []
+					});
+				},
 				success: (data, status) => {
 					that.setState({
+						crawling: false,
 						items: data
 					});
 				}
